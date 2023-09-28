@@ -1,0 +1,123 @@
+---
+title: "DV 1-3 Murray Homework"
+date: October 1, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      theme: spacelab
+      embed-resources: true
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: true
+editor_options: 
+  chunk_output_type: inline
+---
+```{r}
+#| warning: false
+library(tidyverse)
+```
+# Question 1 
+Before looking at the data, I would expect that people who record more exercise will have a lower BMI and vice versa.
+
+```{r}
+#| warning: false
+exercise_data <- read_csv("https://raw.githubusercontent.com/vaiseys/dav-course/main/Data/visualize_data.csv")
+glimpse(exercise_data)
+```
+
+```{r}
+cor(exercise_data$Exercise, exercise_data$BMI)
+```
+
+A correlation value of -.06447185 suggests a negative weak correlation betweeen BMI and Exercise score. 
+
+```{r}
+ggplot(data = exercise_data, mapping = aes(x = Exercise, y = BMI)) + 
+     geom_point()
+```
+
+Definitely not the expected scatterplot... 
+
+# Question 2 
+
+```{r}
+#| warning: false
+library(causact)
+glimpse(corruptDF) 
+```
+
+```{r}
+?corruptDF
+```
+
+The CPI2017 represents a numerical score of the level of corruption within a country (0 = highly corrupt), and the HDI2017 represents a numerical score of the countries level of development including education and income. 
+
+# Question 3 
+
+```{r}
+ggplot(data = corruptDF, mapping = aes(x = HDI2017, y = CPI2017)) + 
+          geom_point()
+```
+Observing the scatter plot above we can see a positive seemingly linear relationship between HDI and CPI. This suggests that as the human development index score increases the corruption score increases which identifies a lower level of corruption. 
+
+# Question 4 
+
+```{r}
+ggplot(data = corruptDF, mapping = aes(x = HDI2017, y = CPI2017)) + 
+                 geom_point() + geom_smooth(method = "lm")
+```
+
+```{r}
+ggplot(data = corruptDF, mapping = aes(x = HDI2017, y = CPI2017)) + 
+                 geom_point() + geom_smooth(method = "gam")
+```
+After using both the "lm" and "gam" smoothing methods, I prefer the "gam" method. Comparing the scatter plot before using geom_smooth, the "gam" method seemed to capture the slightly exponential relationship bewteen HDI and CPI better than the "lm" method did. 
+
+# Question 5 
+
+```{r}
+ggplot(data = corruptDF, mapping = aes(x = HDI2017, y = CPI2017)) + 
+                       geom_point(mapping = aes(color = region)) + geom_smooth(method = "gam")
+```
+Although some patterns begin to emerge when introducing a color aesthetic for  region, the patterns are not jumping off the graph at first glance. 
+
+The next step to understand the patterns, is to introduce a facet wrap function by region. The code below produced a scatterplot for each of the regions. Displaying trends and differences in a clear easier to understand manner. 
+
+```{r}
+ggplot(data = corruptDF, mapping = aes(x = HDI2017, y = CPI2017)) + 
+          geom_point(mapping = aes(color = region)) + facet_wrap("region")
+```
+The SSA region clearly displays the lowest HDI score as well as the lowed CPI suggesting low development and high amounts of corruption. On the contrary, EU W. Europe displays a condensed, high HDI scores and higher CPI scores suggesting high levels of development and low levels of corruption. 
+
+# Question 6 
+
+```{r}
+ggplot(data = corruptDF, mapping = aes(x = HDI2017, y = CPI2017)) + 
+                geom_point(mapping = aes(color = region)) + facet_wrap("region") + scale_x_reverse()
+```
+Before reversing the X-Axis a "good" country with low corruption and high development would appear in the top right of the graph. After reversing the x-axis, a country with low corruption and high development would appear in the top left of the graph. 
+
+# Question 7 
+
+```{r}
+ ggplot(data = corruptDF, mapping = aes(x = HDI2017, y = CPI2017)) +
+    geom_point(mapping = aes(color = region)) +
+          facet_wrap("region") +
+          labs(x = "Human Development Index", y = "Corruption Perceptions Index",
+                          title = "HDI and CPI",
+                          subtitle = "Data points are Countries",
+                         caption = "Source: Transparency International.")
+```
+# Question 8
+
+```{r}
+ggsave(filename = "HDI_CPI.png")
+```
