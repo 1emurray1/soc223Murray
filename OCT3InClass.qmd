@@ -1,0 +1,170 @@
+---
+title: "OCT3"
+date: October 3, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: true
+editor_options: 
+  chunk_output_type: inline
+---
+October 3rd in class work:
+
+```{r}
+#| message: false
+library(tidyverse)
+```
+
+```{r}
+#| message: false
+library(patchwork)
+theme_set(theme_light())
+```
+
+Read in the data
+
+```{r}
+#| message: false
+tv_ratings <- read_csv("https://raw.githubusercontent.com/vaiseys/dav-course/main/Data/tv_ratings.csv")
+```
+
+Histogram:Patchwork can combine all 3 graphs... not doing it in this case... good to know. 
+
+```{r}
+ggplot(tv_ratings,
+             aes(x = av_rating)) +
+  geom_histogram(color = "white",
+                 binwidth = .5,
+                 boundary = 7)
+```
+
+```{r}
+ggplot(tv_ratings,
+             aes(x = av_rating)) +
+  geom_freqpoly(binwidth = .5,
+                boundary = 7)
+```
+Same idea as histogram... drawing a line from the top of every bar. 
+```{r}
+ggplot(tv_ratings,
+             aes(x = av_rating)) +
+  geom_density()
+```
+Weighted average... a little less clear, good way of showing distribution of a variable... If just looking at one plot better to use histogram... if we are comparing two distributions, use the others. 
+```{r}
+tv_ratings_2seasons <- tv_ratings |> 
+  group_by(title) |> 
+  mutate(maxseason = max(seasonNumber)) |> 
+  filter(maxseason >= 2) |> 
+  filter(seasonNumber <= 2) |> 
+  mutate(season = factor(seasonNumber,
+                         levels = c(1, 2),
+                         labels = c("First", "Second")))
+```
+
+```{r}
+c1 <- ggplot(tv_ratings_2seasons,
+             aes(x = av_rating,
+                 group = season,
+                 fill = season)) +
+  geom_histogram(color = "white",
+                 binwidth = .5,
+                 boundary = 7)
+
+c2 <- ggplot(tv_ratings_2seasons,
+             aes(x = av_rating,
+                 group = season,
+                 color = season)) +
+  geom_freqpoly(binwidth = .5,
+                boundary = 7)
+
+c3 <- ggplot(tv_ratings_2seasons,
+             aes(x = av_rating,
+                 group = season,
+                 color = season))+
+  geom_density()
+
+c1 / c2 / c3
+```
+Comparing first and second seasons of shows in terms of average rating. Much easier to see in a density plot. 
+```{r}
+library(worldfootballR)
+
+epl <- fb_match_results(
+  country = "ENG",
+  gender = "M",
+  season_end_year = 2018:2023 
+)
+```
+
+```{r}
+s1 <- ggplot(epl,
+             aes(x = Home_xG,
+                 y = Away_xG)) +
+  geom_jitter(alpha = .2)
+
+s2 <-  ggplot(epl,
+              aes(x = Home_xG,
+                  y = Away_xG)) +
+  geom_bin_2d(binwidth = c(.5, .5))
+
+s1 + s2
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
