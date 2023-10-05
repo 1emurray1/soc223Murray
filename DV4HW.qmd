@@ -1,0 +1,135 @@
+---
+title: "DV4 Homework"
+date: October 3, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: false
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+#| message: false
+tv_ratings <- read_csv("https://raw.githubusercontent.com/vaiseys/dav-course/main/Data/tv_ratings.csv")
+glimpse(tv_ratings)
+```
+# Question 1
+
+```{r}
+tv_long <- tv_ratings %>% 
+  group_by(title) %>% 
+  summarise(num_seasons = n()) %>% 
+  ungroup() %>% 
+  left_join(tv_ratings, by = "title") 
+
+tv_long <- tv_long %>% 
+  filter(num_seasons >= 5)
+```
+
+```{r}
+ggplot(data = tv_long, mapping = aes(x = seasonNumber, y = av_rating)) +
+        geom_line(aes(group = title))
+```
+It is a very jumbled line graph, however it appears that there is no relationship between more seasons and higher ratings...
+
+# Question 2
+```{r}
+ggplot(data = tv_long, mapping = aes(x = seasonNumber, y = av_rating)) +
+     geom_line(aes(group = title)) + facet_wrap(~ genres)
+```
+
+Crime, Drama, Mystery shows tend to last the longest... In general ratings don't change a whole lot across seasons, however there are some exceptions to that observation. The show " Are you Afraid of the Dark" is the show in Drama, Family, Fantasy that experienced rapidly declining ratings, however the name of the show cannot be seen in the graph. 
+
+# Question 3
+
+```{r}
+tv_best <- tv_long %>% 
+  filter(av_rating >= 9)
+```
+
+```{r}
+ggplot(data = tv_best, mapping = aes(x = genres)) +
+     geom_bar()
+```
+
+```{r}
+ggplot(data = tv_best, mapping = aes(x = genres)) +
+          geom_bar() + coord_flip()
+```
+The coord flip, inverts the X and Y axis on the displayed graph... In this case making it easier to view the names of each respective genres. The Genres with the top rated shows are Action, crime, drama and Action, Adventure, Drama.  
+
+# Question 4
+
+```{r}
+comedies_dramas <- tv_ratings %>% 
+  mutate(is_comedy = if_else(str_detect(genres, "Comedy"), 
+                             1, 
+                             0)) %>% # If it contains the word comedy then 1, else 0
+  filter(is_comedy == 1 | genres == "Drama") %>% # Keep comedies and dramas
+  mutate(genres = if_else(genres == "Drama", # Make it so that we only have those two genres
+                          "Drama", 
+                          "Comedy"))
+
+glimpse(comedies_dramas)
+```
+
+```{r}
+ggplot(comedies_dramas,
+        aes(x = av_rating,
+            group = genres,
+            color = genres))+
+     geom_density()
+```
+The density plot displays that dramas have a wider distribution of average ratings compared to comedies which have a concentration of average ratings just above 8. By looking at the graph I would expect the results to be pretty close in terms of which genre is consistently rated higher.
+```{r}
+comedies_dramas |> group_by(genres) |> summarize(mean = mean(av_rating))
+```
+After running the code to see what the mean scores for both comedies and dramas are, I found that comedies actually have a higher mean rating, although it's not by much. 
+
+# Question 5
+
+```{r}
+ggplot(comedies_dramas,
+        aes(x = av_rating,
+            group = genres,
+            color = genres)) +
+     geom_histogram(bins = 10)
+```
+
+```{r}
+ggplot(comedies_dramas,
+        aes(x = av_rating,
+            group = genres,
+            color = genres)) +
+     geom_freqpoly(bins = 10)
+```
+Looking at this data, I think that the frequency polygon is the most effective when looking at the differences between dramas and comedies. For one, we can see that there are much more comedies in the data set with the count on the y axis, and that dramas actually have their highest count at a higher average rating compared to comedies which supports the finding that dramas actually have a slightly higher average rating than comedies. 
+
+# Question 6
+
+```{r}
+ggplot(data = comedies_dramas, mapping = aes(x = av_rating, y = share)) +
+           geom_bin_2d()
+```
+The plot now displays not only the density of the the count, but also share and average rating all at once. Compared to a scatter plot, this graph the previously mentioned count and a statistical measure for the density as well. 
+```{r}
+ggplot(data = comedies_dramas, mapping = aes(x = av_rating, y = share, fill = genres)) +
+                 geom_bin_2d()
+```
+In general, comedies had more share of viewership, and had a lower range of average rating compared to dramas. The one outlier that captured the nation was Dekalog with a share value of 27.24.
