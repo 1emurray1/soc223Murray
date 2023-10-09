@@ -1,0 +1,155 @@
+---
+title: "DV5"
+date: October 5, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+#| message: false
+library(tidyverse)
+```
+
+```{r}
+#| message: false
+wncaa <- read_csv("https://raw.githubusercontent.com/vaiseys/dav-course/main/Data/wncaa.csv")
+```
+
+```{r}
+glimpse(wncaa)
+```
+
+# Question 1
+
+```{r}
+champ_ncaa <- wncaa %>% 
+  filter(tourney_finish == "Champ")
+```
+
+```{r}
+by_school_champ <- champ_ncaa %>% 
+  group_by(school) %>% 
+  summarize(tourney_finish = n())
+```
+
+or from the book:
+
+```{r}
+champ_by_school <- champ_ncaa %>%
+    group_by(school) %>%
+    summarize(tourney_finish = n()) %>%
+    mutate(freq = tourney_finish / sum(tourney_finish),
+           pct = round((freq*100), 0))
+```
+
+```{r}
+Bar_Plot_Schools <- ggplot(champ_by_school, aes(x = school, y = pct)) +
+geom_col(position = "dodge2") +
+    labs(x = "School",y = "Percent") +
+    theme(legend.position = "top") +
+  coord_flip()
+Bar_Plot_Schools
+```
+
+Some patterns become pretty evident from the bar plot... Uconn and Tennesee have the lions share of championships with a combined percentage of 52%, with no other school above 5% of championships.
+
+# Question 2
+
+```{r}
+winners <- wncaa %>% 
+     filter(school %in% champ_ncaa)
+```
+
+```{r}
+ggplot(data = winners,
+            aes(x = school, y = seed)) +
+geom_boxplot() + coord_flip()
+```
+
+```{r}
+boxplot_schools <- ggplot(data = winners, mapping = aes(x = reorder (school, seed), y = seed)) +
+geom_boxplot() + coord_flip() + geom_jitter(position = position_jitter(width = .15))
+boxplot_schools
+```
+
+```{r}
+by_school <- winners %>% group_by(school) %>%
+    summarize(seed_mean= mean(seed, na.rm = TRUE),
+              seed_sd = sd(seed, na.rm = TRUE))
+```
+
+```{r}
+pointplot_schools <- ggplot(data = by_school, mapping = aes(x = school, y = seed_mean)) +
+  geom_point(size = 3) + 
+  labs(x = "School",
+       y = "Average Seed") +
+  theme(legend.position = "top") + coord_flip()
+pointplot_schools
+```
+
+I was honestly surprised to see how Tennessee had a higher average seed than Uconn despite Uconn having a higher share of championships in the same time period.
+
+```{r}
+violin_schools <- ggplot(data = winners, mapping = aes(x = reorder (school, seed), y = seed)) +
+geom_violin() + coord_flip() + geom_jitter(position = position_jitter(width = .15))
+violin_schools
+```
+
+I think the boxplot merged with a average mean summary of the data is more useful in understanding both the overall range/ spread of the data but also where the highest concentrations of seeds are relative to the rest of the teams.
+
+# Question 3
+
+```{r}
+other_pointplot <- ggplot(data = winners, mapping = aes(x = reorder (school, seed), y = seed)) +
+geom_point() + coord_flip() + geom_jitter(position = position_jitter(width = .15))
+other_pointplot
+```
+
+I'm not a fan of this plot personally, but when I used geompoint to look at the averages of the teams previosly I found it to be more useful. It's hard to understand the spread of the data and where the respective quartiles are concentrated.
+
+# Question 4
+
+```{r}
+winners_mean_sd <- winners |> 
+  group_by(school) |> 
+  summarize(across(where(is.numeric),
+                   list(mean = mean,
+                        sd = sd)))
+```
+
+```{r}
+reordered_pointplot <- ggplot(data = winners_mean_sd, mapping = aes(x = reorder (school, reg_percent_mean), y = reg_percent_mean)) +
+geom_point() + coord_flip() + geom_jitter(position = position_jitter(width = .15))
+reordered_pointplot
+```
+
+Texas A&M has the lowest average regular season win percentage for any of the champions since 1982. The lowest reg win percentage of a championship team was Tennessee in 1997 when they won 69.7% of reg games.
+
+```{r}
+pointrange_plot <- ggplot(data = winners_mean_sd, mapping = aes(x = reorder(school, reg_percent_mean), y = reg_percent_mean)) + geom_pointrange(mapping = aes(ymin = reg_percent_mean - reg_percent_sd, ymax = reg_percent_mean + reg_percent_sd)) + coord_flip()
+pointrange_plot
+```
+
+The school with the narrowest interval is Texas A&M. This means they consistently win roughly 67%-79% of regular season games without much variance season by season.
+
+```{r}
+nomeanplot <- ggplot(data = winners_mean_sd, mapping = aes(x = reorder(school, reg_percent_mean), y = reg_percent_mean)) + geom_linerange(mapping = aes(ymin = reg_percent_mean - reg_percent_sd, ymax = reg_percent_mean + reg_percent_sd)) + coord_flip()
+nomeanplot
+```
+
+I don't think this is quite as good as the pointrange, because while it does display a range of percentages, the point for the mean is great for the visual perception of where the mean lies.
