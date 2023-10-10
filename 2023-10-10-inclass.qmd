@@ -1,0 +1,249 @@
+---
+title: "2023-10-10-inclass"
+date: October 10, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+Again, we are going to go through a couple more exercises to reinforce your data wrangling skills.
+
+As usual, we will begin by loading the `tidyverse` (which is the collection of packages that includes all the verbs you just learned about).
+
+```{r}
+#| message: false
+library(tidyverse)
+library(moderndive)
+library(patchwork)
+theme_set(theme_light())
+```
+
+```{r}
+data(evals)
+glimpse(evals)
+```
+
+```{r}
+d <- evals |>
+  rename(bty = bty_avg,    # just shorter to type
+         sex = gender)     # actually what they have
+
+glimpse(d)
+```
+
+```{r}
+head(d)
+```
+
+```{r}
+library(skimr)
+skim(d)
+```
+
+```{r}
+ggplot(d,
+       aes(x = score)) +
+  geom_histogram(boundary = 4,
+                 binwidth = .25,
+                 color = "white")
+```
+
+```{r}
+ggplot(d,
+       aes(x = bty)) +
+  geom_histogram(boundary = 4,
+                 binwidth = .5,
+                 color = "white") +
+  scale_x_continuous(breaks = 2:9)
+```
+
+```{r}
+ggplot(d,
+       aes(x = bty,
+           y = score)) +
+  geom_jitter(alpha = .3)
+```
+
+```{r}
+d |> get_correlation(score ~ bty)     # MD wrapper function (tibble)
+```
+
+```{r}
+d |> select(score, bty) |> cor()      # base R version (matrix)
+```
+
+```{r}
+mod1 <- lm(score ~ bty,
+           data = d)
+```
+
+```{r}
+get_regression_table(mod1)
+```
+
+```{r}
+ggplot(d,
+       aes(x = bty,
+           y = score)) +
+  geom_jitter(alpha = .3) +
+  geom_smooth(method = "lm",     # does this look familiar?
+              se = FALSE)        # don't want to use "standard errors" for now
+```
+
+```{r}
+ggplot(d,
+       aes(x = bty,
+           y = score)) +
+  geom_jitter(alpha = .3) +
+  geom_smooth(method = "lm",
+              se = FALSE,
+              fullrange = TRUE) +
+  scale_x_continuous(limits = c(0,8.5)) +
+  geom_vline(xintercept = 0,
+             color = "red",
+             linetype = "dotted")
+```
+
+```{r}
+p <- ggplot(d,
+       aes(x = bty,
+           y = score)) +
+  geom_jitter(alpha = .3)
+
+p + geom_abline(intercept = 3.88,
+                slope = .067,
+                color = "blue",
+                size = 1.5)
+```
+
+```{r}
+ggplot(d,
+       aes(x = score,
+           y = sex)) +
+  geom_jitter(alpha = .3,
+              height = .2)
+```
+
+```{r}
+ggplot(d,
+       aes(x = score,
+           y = sex)) +
+  geom_boxplot(coef = 0,
+               outlier.alpha = 0,
+               width = .5) +
+  geom_jitter(alpha = .3,
+              height = .2) 
+```
+
+```{r}
+mod2 <- lm(score ~ sex,
+           data = d) 
+
+broom::tidy(mod2)
+```
+# female expected value is 4.09... Male expected value is .14 added to female expected. categorical variable acts like a switch...
+
+
+## Now you practice
+
+# Lets investigate upper vs. lower level courses and how it relates to teaching score... 
+```{r}
+ggplot(d,
+       aes(x = score,
+           y = cls_level)) +
+  geom_jitter(alpha = .3,
+              height = .2)
+```
+
+```{r}
+ggplot(d,
+       aes(x = score,
+           y = cls_level)) +
+  geom_boxplot(coef = 0,
+               outlier.alpha = 0,
+               width = .5) +
+  geom_jitter(alpha = .3,
+              height = .2) 
+```
+It appears in lower level classes professors received higher scores than upper level classes on average. 
+```{r}
+ggplot(d,
+       aes(x = score,
+           y = rank)) +
+  geom_boxplot(coef = 0,
+               outlier.alpha = 0,
+               width = .5) +
+  geom_jitter(alpha = .3,
+              height = .2) 
+```
+Tenured professors have the lowesr average score of the three ranks... interesting. 
+```{r}
+ggplot(d,
+       aes(x = age,
+           y = score)) +
+  geom_jitter(alpha = .3) +
+  geom_smooth(method = "lm",
+              se = FALSE)
+```
+
+```{r}
+age1 <- lm(score ~ age,
+           data = d)
+```
+
+```{r}
+get_regression_table(age1)
+```
+
+```{r}
+ggplot(d,
+       aes(x = age,
+           y = score)) +
+  geom_jitter(alpha = .3)
+
+geom_abline(intercept = 4.462,
+                slope = -.006,
+                color = "blue",
+                size = 1)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+```{r}
+
+```
+
+```{r}
+
+```
