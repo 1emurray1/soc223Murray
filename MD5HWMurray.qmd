@@ -1,0 +1,194 @@
+---
+title: "MD5 Homework "
+date: October 15, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+#| warning: false
+library(tidyverse)
+```
+
+```{r}
+twitch_data <- read_csv("https://raw.githubusercontent.com/vaiseys/dav-course/main/Data/twitchdata-update.csv")
+```
+
+```{r}
+library(janitor)
+twitch_data <- clean_names(twitch_data)
+colnames(twitch_data)
+```
+# Question 1
+
+Illojuan has 4087 average viewers with 275,174 followers.
+CzechCloud has 978 average viewers with 180,668 followers.
+JohnPitterTV has 900 average viewers with 286,184 followers.
+TommyKayLIVE has 1124 average viewers with 127,770 followers.
+Zalae has 1351 average viewers with 170,668 followers.
+
+```{r}
+av_stats <- twitch_data %>%
+  select(average_viewers, followers)
+```
+
+```{r}
+summary(av_stats)
+```
+I thought it was interesting that the mean and 3 quartile of average viewers were almost the same. 
+```{r}
+ggplot(av_stats, aes(x = followers, y = average_viewers)) +
+  geom_point() +
+  geom_jitter(width = 100000, height = 10000) +
+  labs(x = "Followers", 
+       y = "Average Viewers",
+       title = "Scatterplot of relationship of followers and average viewers")
+```
+
+```{r}
+ggplot(av_stats, aes(x = followers, y = average_viewers)) +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_jitter() +
+  labs(x = "Followers", 
+       y = "Average Viewers",
+       title = "Scatterplot of relationship of followers and average viewers")
+```
+Now the relationship between followers and average viewers appears to be positive and is much easier to visualize. 
+
+```{r}
+twitch_data <- twitch_data %>% 
+  mutate(log_viewers = log10(average_viewers), 
+         log_followers = log10(followers))
+```
+
+# Question 2
+
+```{r}
+fit1 <- lm(log_viewers ~ log_followers,
+           data = twitch_data)
+```
+
+```{r}
+library(broom)
+```
+
+
+```{r}
+tidy(fit1)
+```
+
+1.1^(.5) = 1.049
+a 10% increase in followers is associated with a 4.9% increase in the average number of viewers.
+
+# Question 3
+
+```{r}
+library(broom)
+
+pred_data <- augment(fit1)
+
+# glimpse our new data 
+glimpse(pred_data)
+```
+
+```{r}
+pred_data %>% 
+  ggplot(aes(x = log_followers, 
+             y = log_viewers)) +
+  geom_jitter(alpha = 0.4) + 
+  geom_line(aes(x = log_followers, 
+                y = .fitted), 
+            col = "orange") + 
+  theme_minimal() +
+  labs(subtitle = "Fitted Model and Raw Data", 
+       title = "Followers & Average Viewership", 
+       x = "log(followers)", 
+       y = "log(viewers)")
+```
+
+The model appears to describe the relationship between the two variables well.. The line of best fit seems to provide a good visualization. 
+
+```{r}
+pred_data %>% 
+  ggplot(aes(x = log_followers, 
+             y = .resid)) +
+  geom_jitter(alpha = 0.4) +
+  geom_hline(yintercept=0, linetype = "dashed", color = "orange") +
+  theme_minimal() +
+  labs(subtitle = "Followers and Residual", 
+       title = "Followers & Average Viewership", 
+       x = "log(followers)", 
+       y = "residual")
+```
+
+The bigger residuals reflect some of the streamers that our model displays poorly... We do.a relatively good job across the board, but obviously not perfect.
+
+# Question 4
+
+```{r}
+lang_view <- twitch_data %>%
+  select(average_viewers, language)
+```
+
+```{r}
+ggplot(lang_view, aes(x = language, y = average_viewers)) +
+  geom_boxplot() +
+  coord_flip() +
+  labs(x = "Language", y = "Average Viewers",
+       title = "Average Viewers by Langauge")
+```
+# Question 5
+
+```{r}
+twitch_data <- twitch_data %>% 
+  mutate(language = as.factor(language), 
+         language = relevel(language, ref = "English"))
+```
+
+```{r}
+views_lang <- lm(average_viewers ~ language, data = twitch_data)
+```
+
+```{r}
+tidy(views_lang)
+```
+
+Your prediction seems to be holding true, however it is not the most popular compared to Arabic, Russian, Spanish as those countries have positive residuals.
+
+# Question 6
+
+```{r}
+fit2 <- lm(average_viewers ~ language,
+           data = twitch_data)
+```
+
+```{r}
+tidy(fit2)
+```
+
+```{r}
+new_data <- augment(fit2)
+```
+
+```{r}
+new_data %>% ggplot(aes(x = average_viewers, y = .resid)) + geom_jitter(alpha = 0.2) + geom_smooth(method = lm) + scale_x_log10() + labs(subtitle = "Fitted Model and Raw Data", title = "Average Viewership and Residual", x = "Average Viewers", y = "Residual")
+```
+
+The clear outliers here and the points our model missed were dota2ti and dota2ti_ru... This streamer has both an English and Russian stream which accounts for the two points seen as outliers on the above graph. 
