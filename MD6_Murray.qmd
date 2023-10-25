@@ -1,0 +1,179 @@
+---
+title: "MD6 Homework"
+date: October 25, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+#| warning: false
+library(tidyverse)
+```
+
+```{r}
+theme_set(theme_light())
+```
+
+```{r}
+gender_employment <- read_csv("https://raw.githubusercontent.com/vaiseys/dav-course/main/Data/gender_employment.csv")
+```
+
+```{r}
+glimpse(gender_employment)
+```
+
+```{r}
+#| warning: false
+gender_employment%>% 
+  ggplot(aes(x = year, y = wage_percent_of_male)) +
+  geom_jitter(alpha = 0.1) + 
+  geom_smooth(method = "lm") + 
+  labs(title = "Women's earnings with respect to men's", 
+       y = "% of Men's Income", 
+       x = "Year")
+```
+
+# Question 1
+
+```{r}
+gender_employment <- gender_employment %>% 
+  mutate(major_category = as.factor(major_category), 
+         major_category = relevel(major_category, ref = "Management, Business, and Financial"))
+```
+
+```{r}
+library(broom)
+```
+
+```{r}
+parallel_model <- lm(wage_percent_of_male ~ year + major_category, data = gender_employment)
+```
+
+```{r}
+tidy(parallel_model)
+```
+
+The positive coefficient for the year variable shows that there is a slightly positive trend in female wages year over year with an estimate of .192.
+
+To calculate the wage percent income for sales and office occupations for the year 2015 it would look something like this:
+
+```{r}
+-306.7183854 + (3.33 * 1) + (.192 * 2015)
+```
+
+To interpret this, this would suggest that in the year 2015, women made 83.49% of what men made in sales and office occupations. 
+
+To calculate wage percentage of male income for Service occupations on 2016 it would look like this:
+
+```{r}
+-306.7183854 + (6.08 * 1) + (.192 * 2016)
+```
+
+This suggests that in service occupations in 2016, women made 86.4% of what men made in the same year and workplace. 
+
+# Question 2
+
+```{r}
+#| warning: false
+gender_employment%>% 
+  ggplot(aes(x = year, y = wage_percent_of_male)) +
+  geom_jitter(alpha = 0.1) + 
+  geom_smooth(method = "lm") + 
+  facet_wrap(~ major_category) +
+  labs(title = "Women's earnings with respect to men's", 
+       y = "% of Men's Income", 
+       x = "Year")
+```
+
+Even after introducing facets by major category, the parallel trend seems to continue across msot of the categories, however, natural resources, construction and maintenance has seen a more drammatic upward trend. 
+
+# Question 3
+
+```{r}
+model2 <- lm(wage_percent_of_male ~ year + major_category + year:major_category, data = gender_employment)
+```
+
+```{r}
+tidy(model2)
+```
+The estimate would be for "Computer, Engineering, and Science" for 2016 would look like this:
+```{r}
+-1370.47 + (.72 * 2016) + (1002.85) - (.49 *2016) 
+```
+
+The estimate for service would look like this:
+
+```{r}
+-1370.47 + (.72 * 2016) + (2137.65) + (-1.06*2016)
+```
+
+The wage gap in service is much bigger compared to computer engineering and science. 
+
+# Question 4
+
+Given we have the ability to have slopes across varying categories one might use the parallel trends at least to begin their analysis because it is easier to identify differences in expected parallel trends than smaller differences in sloped trends. Whenever we let a model get more complicated it fits our current sample better, rather than predicting the value of our next sample which is what we are actually interested in predicting. 
+
+# Question 5
+
+```{r}
+simple_fit <- lm(wage_percent_of_male ~ year, data = gender_employment)
+```
+
+```{r}
+tidy(simple_fit)
+```
+A estimate of .20 for year suggests that for each yearly increase we can expect .20 shifting of the wage gap between females and males.
+
+```{r}
+gender_employment %>% 
+  select(year, wage_percent_of_male, percent_female) %>% 
+  cor(use = "complete.obs")
+```
+The .0049 for percent_female suggests that as percentage of females in the workplace grows, the pay gap narrows as well in that job.  
+```{r}
+multiple_fit <- lm(wage_percent_of_male ~ year + percent_female, data = gender_employment)
+```
+
+```{r}
+tidy(multiple_fit)
+```
+These results show that more women in a given work sector could lead to less pay gap between male and female. 
+
+# Question 6
+
+R squared is a value used to measure a lines "goodness of fit" or how well the line represents our sample given the distance of various data points from the expected value. If the R squared value is 1 then all of the expected points from our regression would be the same as the sample points. 
+
+```{r}
+simple_glanced <- glance(simple_fit)
+```
+
+```{r}
+simple_glanced$r.squared
+```
+
+```{r}
+multiple_glanced <- glance(multiple_fit)
+```
+
+```{r}
+multiple_glanced$r.squared
+```
+
+Because the produced R squared value for both models is so small, this would suggest that our model's prediction is not very good overall. 
+
+Adding more variables even if the variables have no relation to our model lead to an increase in the R squared figure. This shows that we can't rely solely on the R squared value for our evaluation of a models usage or ability to predict an association. 
