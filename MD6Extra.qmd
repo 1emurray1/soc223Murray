@@ -1,0 +1,219 @@
+---
+title: "MD6Extra"
+date: October 29, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      embed-resources: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: true
+editor_options: 
+  chunk_output_type: inline
+---
+```{r}
+#| message: false
+library(tidyverse)
+```
+
+```{r}
+#| message: false
+library(moderndive)
+```
+
+```{r}
+theme_set(theme_minimal())
+chooseCRANmirror(ind = 1)
+```
+
+```{r}
+#| message: false
+install.packages("bayesrules")
+library(bayesrules)
+data(bikes, package = "bayesrules")
+```
+
+# Question 0
+
+There are 500 rows in the data set, each row represents a day of rides among registered members using the Capital Bikeshare service. 
+The dates covered by the data span from January 1st, 2011 to December 31st of 2012, although not every single day in between has data. 
+The highest observed ridership occurred September 26 of 2012 with 6,946 rides occurring. 
+The highest wind speed was recorded February 19th, 2011 with a registered speed of ~34mph.
+
+# Question 1
+
+```{r}
+mod1<- lm(rides ~ temp_feel, data = bikes)
+```
+
+```{r}
+get_regression_table(mod1)
+```
+The intercept suggests if temp_feel was 0 degrees farenheit there would be -2,179 rides. Obviously not useful for our interpretation but nonetheless, interesting. The estimate for tem_feel is 81.88, this suggests that for every 1 increase in degrees Fahrenheit we can expect the number of rides to increase by 81.88. 
+
+```{r}
+bikes %>% 
+  get_correlation(formula = rides ~ temp_feel)
+```
+A correlation score of .5824 suggests the the feel temp goes up so does the number of overall rides. 
+```{r}
+mod2<- lm(rides ~ windspeed, data = bikes)
+```
+
+```{r}
+get_regression_table(mod2)
+```
+The intercept in this case suggests that if windspeed were zero miles per hour we can expect there to be 4,205 rides. The estimate for windspeed is -55.523, this suggests that for every one increase in windspeed miles per hour we can expect the number of rides to decrease by 55.5.
+
+```{r}
+bikes %>% 
+  get_correlation(formula = rides ~ windspeed)
+```
+This negative correlation of -.19 suggests that as wind speed increases, the number of overall rides is likely to decrease. 
+
+# Question 2
+
+```{r}
+bikes$wind_kph <- bikes$windspeed * 1.61
+```
+
+```{r}
+mod3 <- lm(wind_kph ~ windspeed, data = bikes)
+```
+
+```{r}
+get_regression_table(mod3)
+```
+
+We shouldn't have to run a regression table to understand that the correlation between these two variables is positive and linear. Because they are expressing the same variable in different ways of measuring speed, thus they will increase in at the same rate with the slope of the line being 1.61 which was the conversion factor we used above. 
+
+# Question 3
+
+```{r}
+mod4 <- lm(rides ~ windspeed, data = bikes)
+```
+
+```{r}
+get_regression_table(mod4)
+```
+
+```{r}
+mod5 <- lm(rides ~ wind_kph, data = bikes)
+```
+
+```{r}
+get_regression_table(mod5)
+```
+
+The intercepts are the same as expected because the intercept represents how many rides would occur if the win was 0, which is the same value in both regressions. However, the estimate has changed, but only by a factor of 1.61. The wind KPH estimate is -34.486 which multiplied by 1.61 is the original 55.23. The effect of one change in wind_kph is smaller because the actual experienced change in speed is smaller between kph and mph. 
+
+# Question 4
+
+For 20 KPH:
+```{r}
+(-34.486 * 20) + 4205.065
+```
+ 
+The predicted amount of rides when the wind is blowing 20 KPH is 3,515.345.
+
+For 20 MPH:
+```{r}
+(-55.523 * 20) + 4205.065
+```
+
+The predicted amount of rides when the wind is blowing 20 MPH is 3,094.605.
+
+# Question 5
+
+```{r}
+bikes$temp_c <- (bikes$temp_feel - 32) * 5/9
+```
+
+```{r}
+MultMod6 <- lm(rides ~ wind_kph + temp_c, data = bikes)
+```
+
+```{r}
+get_regression_table(MultMod6)
+```
+
+" For a one KPH increase in windspeed, the model expects a 19.842 decrease in riders."
+"For a one degree celcius increase in temperature, the model expects a 143.234 increase in riders."
+An intercept of 942.426 represents the number of riders expected when wind_kph and temp_c are both zero. Thus, if there was no wind and it was exactly 0 degrees celcius the model predicts 942.426 riders. 
+
+# Question 6
+
+Situation 1:
+```{r}
+(25 * 143.234) + (15 * -19.842) + 942.426
+```
+Predicted ridership for 25 degrees celcius and 15 KPH of wind is 4,225.646.
+
+Situation 2
+```{r}
+(15 * 143.234) + (5 * -19.842) + 942.426
+```
+Predicted ridership for 15 degrees celcius and 5 KPH of wind is 2,991.726.
+
+Situation 3
+```{r}
+(10 * 143.234) + (40 * -19.842) + 942.426
+```
+Predicted ridership for 10 degrees celcius and 40 KPH of wind is 1581.086.
+
+# Question 7
+
+```{r}
+MultMod7 <- lm(rides ~ wind_kph + temp_c + weekend, data = bikes)
+```
+
+```{r}
+get_regression_table(MultMod7)
+```
+
+The coefficient for weekendTRUE suggests thqt there are on average 714.575 less riders during the weekend days when taking into account temperature and wind variables as well. 
+
+# Question 8
+
+We need to find the average temp_c and wind_kph then run our multiple regression equation including weekendFALSE:
+
+```{r}
+av_temp_c <- mean(bikes$temp_c)
+```
+
+Average temperature in celcius for the data set is 20.635 degrees. 
+
+```{r}
+av_wind_kph <- mean(bikes$wind_kph)
+```
+
+Average win speed in KPH for the data set is 20.96KPH.
+
+The multiple regression equation would look like this: we use 1 because it's a weekend day we use 0 when it is not a weekend day. 
+```{r}
+1214.803 + (-20.386 * 20.96) + (140.339 * 20.635) + (-713.575 * 1)
+```
+This suggests that on an average weekend day with average wind and average temperature in our specific data set we can expect 2,969.833 riders. 
+
+The multiple regression equation would look like this: we use 0 because it's a week day.
+```{r}
+1214.803 + (-20.386 * 20.96) + (140.339 * 20.635) + (-713.575 * 0)
+```
+This suggests that on an average week day with average wind and average temperature, in our specific data set, we can expect 3,683.408 riders. 
+
+# Question 9
+
+```{r}
+residuals <- get_regression_points(MultMod7)
+```
+
+The date with the largest absolute residual was October 29th, 2012. This was a weekday, Monday in particular, with wind KPH of 38.64 and Temp in celcius of 21.97. The number of rides that day was only 20. With some light research into the date in question this was around the time that Hurricane Sandy made landfall close to Washington DC although it didn't directly impact the city much of the city shut down in preparations for the Hurricane. Our model was so wrong because it can't predict major weather events and city wide shut downs, obviously... 
