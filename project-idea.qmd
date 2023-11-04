@@ -1,0 +1,29 @@
+---
+title: "November 2 In Class"
+date: "November 2"
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      embed-resources: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: true
+editor_options: 
+  chunk_output_type: inline
+---
+Final Project Idea: 
+
+Creating a predictive model that can say with x% of confidence whether or not a CURRENT MLB player will make the Hall of Fame compared to previous inductees and their statistics. 
+
+Lina: Thinking about engaging with 2023 women's world cup data vs Men's world cup. Goals scored. 
+Ayanna: Comparing the NY Knicks to other NBA teams.. Whether or not the Knicks actually suck. 
+Estella: Harry Potter Characters: Hair colors and wand types. 
