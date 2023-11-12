@@ -1,0 +1,169 @@
+---
+title: "MD7 Homework"
+date: November 9, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      embed-resources: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+      include_sampling_tasks: false
+editor: source
+execute:
+  echo: true
+  message: true
+  warning: false
+editor_options: 
+  chunk_output_type: inline
+---
+```{r}
+#| warning: false
+library(tidyverse)
+library(here)
+library(moderndive)
+theme_set(theme_minimal())
+```
+
+```{r}
+#| warning: false
+nobel_winners <- read_csv("https://raw.githubusercontent.com/vaiseys/dav-course/main/Data/nobel_winners.csv")
+```
+
+```{r}
+nobel_winners_flt <- nobel_winners %>% 
+  filter(category != "Peace") %>% 
+  mutate(is_us = if_else(birth_country == "United States of America", 1, 0))
+```
+
+```{r}
+true_prop <- nobel_winners_flt %>% 
+  group_by(is_us) %>% 
+  summarise(prop = n()/nrow(nobel_winners_flt))
+
+ggplot() + 
+  coord_cartesian(xlim = c(0,1), ylim = c(0,1)) + 
+  geom_vline(xintercept = true_prop[2,2][[1]], linetype = "dashed")  + 
+  labs(x = "Proportion")
+```
+
+```{r}
+set.seed(33)
+# Random sample 
+our_sample <- sample_n(nobel_winners_flt, 
+                       size = 25, 
+                       replace = F)
+
+sample_prop <- our_sample %>% 
+  group_by(is_us) %>% 
+  summarise(prop = n()/nrow(our_sample))
+
+# How does our proportion look like? 
+ggplot() + 
+  coord_cartesian(xlim = c(0,1), ylim = c(0,1)) + 
+  geom_vline(xintercept = true_prop[2,2][[1]], linetype = "dashed")  + 
+  geom_vline(xintercept = sample_prop[2,2][[1]], linetype = "dotted", col = "red") +
+  labs(x = "Proportion")
+```
+
+# Question 1
+
+In this scenario the population is all nobel prize winners. The sampling framework in this case is the 25 randomly selected winners. The black line represents the population proportion. The red line was the sample proportion taken from our sample of 25 selected winners. 
+
+# Question 2
+
+
+```{r}
+virtual_samples <- nobel_winners_flt %>% 
+  rep_sample_n(size = 25, reps = 50)
+virtual_samples
+sample_props <- virtual_samples %>% 
+  group_by(replicate) %>% 
+  summarise(prop = sum(is_us) / n())
+ggplot(sample_props, aes(x = prop)) +
+  geom_histogram(binwidth = 0.05, fill = "yellow", color = "black") +
+  geom_vline(xintercept = true_prop[2, 2][[1]], linetype = "solid", color = "black", size = 1) +
+  geom_vline(xintercept = mean(sample_props$prop), linetype = "solid", color = "red", size = .5) +
+  labs(x = "Proportion", y = " Freq. ", title = " 50 Samples of 25 Winners") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, .75), ylim = c(0, 15))
+```
+
+# Question 3
+
+```{r}
+Bigger_samples <- nobel_winners_flt %>% 
+  rep_sample_n(size = 100, reps = 50)
+Bigger_samples
+Sample_Props_Bigger <- Bigger_samples %>% 
+  group_by(replicate) %>% 
+  summarise(prop = sum(is_us) / n())
+ggplot(Sample_Props_Bigger, aes(x = prop)) +
+  geom_histogram(binwidth = 0.05, fill = "yellow", color = "black") +
+  geom_vline(xintercept = true_prop[2, 2][[1]], linetype = "solid", color = "black", size = 1) +
+  geom_vline(xintercept = mean(sample_props$prop), linetype = "solid", color = "red", size = .5) +
+  labs(x = "Proportion", y = " Freq. ", title = " 50 Samples of 100 Winners") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, .75), ylim = c(0, 20))
+```
+
+
+
+The second distribution has less variability due to the larger overall sample being 100 vs. 25 winners. The larger the sample size the less variability we can expect in each theoretical sample vs. the next.
+
+# Question 4
+
+```{r}
+sd_25 <- sd(sample_props$prop)
+```
+
+.1081
+
+```{r}
+sd_100 <- sd(Sample_Props_Bigger$prop)
+```
+
+.0466
+
+The St. Dev is smaller in the bigger sample size, supporting the argument above that as sample size increases, variability decreases.
+
+# Question 5
+
+```{r}
+nobel_winners_gend <- nobel_winners_flt %>% 
+  mutate(is_woman = if_else(gender == "Female", 1, 0))
+```
+
+```{r}
+true_prop_gend <- nobel_winners_gend %>% 
+  group_by(is_woman) %>% 
+  summarise(prop = n()/nrow(nobel_winners_gend))
+
+ggplot() + 
+  coord_cartesian(xlim = c(0,1), ylim = c(0,1)) + 
+  geom_vline(xintercept = true_prop[2,2][[1]], linetype = "dashed")  + 
+  labs(x = "Proportion")
+```
+
+```{r}
+
+samples_gend <- rep_sample_n(nobel_winners_gend, size = 100, reps = 50, replace = FALSE)
+props_gender <- samples_gend %>% 
+  group_by(replicate) %>% 
+  summarise(prop = sum(is_woman) / n())
+ggplot(props_gender, aes(x = prop)) +
+  geom_histogram(binwidth = 0.02, fill = "yellow", color = "black") +
+  geom_vline(xintercept = true_prop_gend[2, 2][[1]], linetype = "solid", color = "black", size = 1) +
+  geom_vline(xintercept = mean(props_gender$prop), linetype = "solid", color = "red", size = .5) +
+  labs(x = "Proportion", y = " Freq. ", title = " 50 Samples of 100 ") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(0, .15), ylim = c(0, 35))
+
+```
+# Question 6
+
+The Central Limit Theorem is based on the concept that the average value of a sample has a "normal distribution. A higher concentration of observations will appear at the average value, with the frequency of these observations decreasing as you move away from the average both positively and negatively. Further, the bigger the sample size, the more "normal" shaped the distribution appears, the smaller the sample the more variability within the distribution.
