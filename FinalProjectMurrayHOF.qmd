@@ -1,0 +1,348 @@
+---
+title: "Predictive Factors of MLB Hitters & Hall of Fame Induction"
+date: December 6, 2023
+author: "Ethan Murray"
+format: 
+    html: 
+      self-contained: true
+      embed-resources: true
+      theme: spacelab
+      toc: true
+      number-sections: false
+      code-tools: true
+      code-fold: false
+      df-print: kable
+editor: source
+execute:
+  echo: true
+  message: false
+  warning: false
+editor_options: 
+  chunk_output_type: inline
+---
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+#| message: false
+#| warning: false
+library(tidyverse)
+library(readxl)
+library(dplyr)
+theme_set(theme_minimal())
+options(repos = c(CRAN = "https://cran.rstudio.com"))
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+install.packages("readxl", quiet = TRUE)
+library(readxl)
+MYDATA2 <- read_excel("~/Downloads/MYDATA2.xlsx")
+```
+
+```{r echo=FALSE}
+#| message: false
+MYDATA2$Inducted <- as.factor(MYDATA2$Inducted)
+levels(MYDATA2$Inducted) <- c("0", "1")
+MYDATA2$POS <- as.factor(MYDATA2$POS)
+```
+
+# 1. Introduction
+
+Founded in 1908, the Baseball Writer's Association is a task force charged with voting for and electing the best baseball players of all time for the most prodigious honor across all of sports - enshrinement into the National Baseball Hall of Fame. This study aims to better understand what factors contribute to a player's induction versus a player who's number of votes on the ballot fails to meet the required threshold. Further, I sought to create a predictive model that uses the data to analyze an active player's stats to determine their likelihood of Hall of Fame induction. 
+
+To address this question, a data set was configured from Baseball Reference's archives. The archive is consistently updated and contains data from the beginning of baseball's history up until the last game of the 2023 season. This data includes 177 of the best baseball hitters of all time, however only 88 of them were inducted into the Hall of Fame by the writer's association. The other 89 players in the data set received a portion of the votes for Hall of Fame Induction, but ultimately did not accrue the 75% of votes needed for enshrinement. 
+
+In the last 20 years, significant controversy has arose regarding performance enhancing substances and their influence on Hall of Fame voting. For the purposes of this study, any player who was accused of or had any controversy regarding performance enhancing substances were omitted from the data. Further, in order to gain a more accurate comparison of what separates Hall of Famers from other ball players, players who were not inducted needed to accumulate 40 WAR to be included in the analysis.
+
+This data set doesn't include accolades, post-season achievements, or any measure of a player's popularity which likely influence a portion of a player's likelihood of being voted into the Hall of Fame. This analysis looks purely at statistical measures which offers a numeric evaluation between statistics and Hall of Fame enshrinement.
+
+# 2. Exploratory Data Analysis
+
+Wins above replacement, more commonly referred to as "WAR" is a sabermetric unit to evaluate how much value a specific player brings to the team compared to another player who is a substitute or bench player. For example, if a player accrues 5 WAR across a given season, that player provided 5 more wins for the team by being in the lineup compared to another "average" or a replacement player playing in their place. This study will look extensively at WAR, as it has become one of the driving forces behind Hall of Fame induction in recent years. 
+
+Statistics comparing Hall of Fame Inductees vs. Non-Inductees: 
+
+```{r echo=FALSE}
+averages_by_inducted <- MYDATA2 %>%
+  group_by(Inducted) %>%
+  summarise(
+    Avg_WAR = mean(WAR),
+    Avg_DWAR = mean(DWAR),
+    Avg_G = mean(G),
+    Avg_AB = mean(AB),
+    Avg_R = mean(R),
+    Avg_H = mean(H),
+    Avg_HR = mean(HR),
+    Avg_RBI = mean(RBI),
+    Avg_SB = mean(SB),
+    Avg_BB = mean(BB),
+    Avg_BA = mean(BA),
+    Avg_OBP = mean(OBP),
+    Avg_SLG = mean(SLG),
+    Avg_OPS = mean(OPS)
+  )
+```
+
+```{r echo=FALSE}
+averages_table <- tibble(
+  "Induction Status" = factor(averages_by_inducted$Inducted, labels = c("Not Inducted", "Inducted")),
+  "Average WAR" = averages_by_inducted$Avg_WAR,
+  "Average Defensive WAR" = averages_by_inducted$Avg_DWAR,
+  "Average Games Played" = averages_by_inducted$Avg_G,
+  "Average At Bats" = averages_by_inducted$Avg_AB,
+  "Average Runs Scored" = averages_by_inducted$Avg_R,
+  "Average Hits" = averages_by_inducted$Avg_H,
+  "Average Home Runs" = averages_by_inducted$Avg_HR,
+  "Average RBI" = averages_by_inducted$Avg_RBI,
+  "Average Stolen Bases" = averages_by_inducted$Avg_SB,
+  "Average Walks" = averages_by_inducted$Avg_BB,
+  "Average Batting Average" = averages_by_inducted$Avg_BA,
+  "Average On Base %" = averages_by_inducted$Avg_OBP,
+  "Average Slugging %" = averages_by_inducted$Avg_SLG,
+  "Average On Base + Slugging" = averages_by_inducted$Avg_OPS
+)
+```
+
+```{r echo=FALSE}
+#| message: false
+library(kableExtra)
+
+kable(averages_table, format = "html", caption = "Averages by Induction Status", digits = 3) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+Unsurprisingly, on average, players who have been inducted out perform non-inducted players in nearly every statistic. After all, these players are the best of all time. The only exception was defensive WAR: Non-inducted players were on average better than the inducted players at defense. 
+
+It's important to investigate if and how these trends continue by defensive position. This is displayed through a comparative bar plot. 
+```{r echo=FALSE}
+#| message: false
+#| #| warning: false
+POS_COMP_PLOT <- MYDATA2 %>%
+  mutate(POS = factor(POS, levels = c("2", "3", "4", "5", "6", "7", "8", "9", "10"))) %>%
+  group_by(POS, Inducted) %>%
+  summarise(Avg_WAR = mean(WAR)) %>%
+  ggplot(aes(x = POS, y = Avg_WAR, fill = Inducted)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Average WAR by Position and Induction Status",
+       x = "Position",
+       y = "Average WAR",
+       fill = "Induction Status") +
+  theme_minimal() +
+  scale_fill_manual(values = c("black", "gold"))
+
+POS_COMP_PLOT
+```
+Inducted Players are represented by (1) in yellow, and non-inducted players are represented by (0) in Black. Similarly, players positions are represented by traditional positional numbers:
+
+2= Catcher
+3= First Basemen
+4= Second Basemen
+5= Third Basemen
+6= Shortstop
+7= Left Fielders
+8= Center Fielders 
+9= Right Fielders
+10= Designated Hitters
+
+As presented in the graph, the trend continues by position with respect to the WAR variable. Centerfielders (8), in particular tend to have the biggest distinction in WAR between inducted vs non-inducted players. However, it looks like the difference between designated hitters and catchers is much smaller.
+
+Previously, I mentioned that WAR has become a very popular variable to determine Hall of Fame induction among the baseball writers, thus, we could expect that difference to exist, even by position. 
+
+After examining a performance based metric like WAR, I thought it would be interesting to analyze whether a non-performance based statistic displays the same trends. I decided to look at average games played grouped by position and induction status.
+
+```{r echo=FALSE}
+#| message: false
+#| #| warning: false
+G_POS <- MYDATA2 %>%
+  group_by(Inducted, POS) %>%
+  summarise(Avg_G = mean(G))
+ggplot(G_POS, aes(x = POS, y = Avg_G, fill = Inducted)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Differences in Games Played by Position and Induction Status",
+       x = "Position",
+       y = "Average Games Played",
+       fill = "Induction Status") +
+  theme_minimal() +
+  scale_fill_manual(values = c("black", "gold"))
+```
+Using the same representation as the graph above, Inducted Players are represented by (1) in yellow, and non-inducted players are represented by (0) in Black.
+
+Even when considering a variable that does not take into account "performance", such as amount of games played, inducted players tend to outpace non-inducted players. The only exception are designated hitters, where non-inducted players actually played in more games than Hall of Famers. 
+
+# 3. Further Exploratory Analysis
+
+The most popular statistic when measuring a player's success is the amount of home runs they hit. This statistic is representative of a players power and ability to drive in runs and help their team win. Presented below are the differences between inducted and non-inducted and their home run career totals.
+
+```{r echo=FALSE}
+ggplot(MYDATA2, aes(x = factor(Inducted), y = HR)) +
+  geom_boxplot(fill = "lightblue", color = "blue") +
+  labs(title = "Average Home Runs by Induction Status",
+       x = "Induction Status",
+       y = "Average Home Runs") +
+  theme_minimal()
+```
+Remaining consistent, inducted Players are represented by (1) and non-inducted players are represented by (0).
+
+The boxplot represents a stark difference in home run totals between the two groups. Inducted players tend to have a higher and wider interquartile range along with higher tail values. 
+
+Due to the increasing importance of WAR and the already established importance of home runs, I wanted to investigate the relationship between home runs relate WAR totals.
+
+The scatter plot below includes both inducted and non-inducted players and displays the relationship between home runs and WAR. 
+
+```{r echo=FALSE}
+ggplot(MYDATA2, aes(x = WAR, y = HR)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Scatter Plot of WAR and Homeruns",
+       x = "WAR",
+       y = "Homeruns")
+```
+The plot above showcases a linear and positive trend between WAR and home runs. However, there are various players that appear to be outliers, which forced me to consider other potential factors and confounding variables which could affect the data. For example, the time period of a player's career can influence their offensive statistics. From 1900-1920, the MLB experienced what was called the "Dead Ball Era" which was a period of drastic reduction in runs scored and home runs. This demonstrates that across the history of the game, players from different decades experienced unique styles of play. Therefore, a direct comparison between a player from the 1920s and a player from the early 2000s would yield drastically different statistics regardless of induction status.
+
+To conclude my exploratory analysis, I generated a colored scatter plot, and used geom smooth to showcase the linear relationship between other offensive variables such as RBI, runs scored and hits. All three variables displayed a positive trend when combined with WAR and had relatively parallel slopes, with the amount of total accrued hits displaying a sharper vertical slope than RBIs and runs scored. 
+
+```{r echo=FALSE}
+ggplot(MYDATA2, aes(x = WAR)) +
+  geom_smooth(aes(y = RBI, color = "RBI"), method = "lm", se = FALSE) +
+  geom_smooth(aes(y = R, color = "Runs Scored"), method = "lm", se = FALSE) +
+  geom_smooth(aes(y = H, color = "Hits"), method = "lm", se = FALSE) +
+  labs(title = "Plot of WAR with RBIs, Runs and Hits",
+       x = "WAR",
+       y = "Variables") +
+  scale_color_manual(values = c("green", "orange", "purple")) +
+  theme_minimal()
+```
+# 4. Linear Regression Model
+
+The components of my initial linear regression model are outlined below:
+
+Outcome Variable: y= Expected WAR... 
+Explanatory Variable: x= Runs Batted In (RBI)
+
+```{r echo=FALSE}
+WARRBI_model <- lm(WAR ~ RBI, data = MYDATA2)
+summary(WARRBI_model)
+```
+The intercept of the linear regression model illustrates that if a player were to have 0 RBI the model expects a player to have 12.5 WAR, and for every 1 increase in a player's RBI totals the model expects WAR to increase .043 units. I then used this model to predict a players WAR from their total RBI. I chose Derek Jeter who had 1,311 career RBI. 
+
+```{r}
+DJPredicted <- 12.51 +(.043*1311)
+print(DJPredicted)
+```
+
+Our linear regression model predicted Derek Jeter to have 68.9 career WAR solely based on his RBI, when in reality his career WAR was 71.3. In this particular case, the model did a good job of predicting Jeter's WAR from his RBI totals.
+
+# 5. Logistic Regression Model
+
+In order to evaluate how a numeric variable affects my binary outcome of Inducted or Not-Inducted, a logistic regression model was used. The unit of analysis is WAR and its effect on induction status. 
+
+```{r echo=FALSE}
+logWAR <- glm(Inducted ~ WAR, 
+                      data = MYDATA2, 
+                      family = binomial)
+summary(logWAR)
+
+```
+
+These results suggest that wins above replacement is a very strong predictor of Hall of Fame Induction. In fact, the coefficient for WAR in the logistic regression model is .16, this means that for every 1 unit increase in WAR, the log odds of a player being inducted into the Hall of Fame increase by 16%. So the log odds were then calculated.
+
+```{r}
+war_coeff <- 0.16036
+odds <- exp(war_coeff)
+print(odds)
+```
+
+The log odds produced a value which I could interpret more directly. For every one increase in WAR, the odds of being inducted go up 17.4%! Although this appears to be an incredibly strong relationship I wanted to examine some possible uncertainty in my model using confidence intervals.
+
+```{r echo=FALSE}
+conf_int_WAR <- confint(logWAR)
+conf_int_WAR
+summary(conf_int_WAR)
+```
+The confidence interval from the model shows that with 95% certainty, the model expects that a one unit increase in WAR will give a player between 11.7% and 21.2% (log odds) higher chance of being inducted into the Hall of Fame. 
+
+# 6. Further Logistic Testing
+
+Having looked at home runs previously, I wanted to create another logistic model investigating home runs as the unit of analysis and the effect Hall of Fame induction. 
+
+```{r echo=FALSE}
+logHR <- glm(Inducted ~ HR, 
+                      data = MYDATA2, 
+                      family = binomial)
+summary(logHR)
+```
+Once again, homeruns appear to be a strong predictor of Hall of Fame induction. I evaluated the log odds of the coefficient (.004697) further for interpretation.
+
+```{r}
+HR_coeff <- 0.004697
+oddsHR <- exp(HR_coeff)
+print(oddsHR)
+```
+This number suggests that for every homerun a player hits, their odds of Hall of Fame induction goes up .47%.
+
+# 7. Predictive Model
+
+Ultimately, I want the end of my analysis to be centered around predictive modelling and generating probabilities of induction based on given stats. In order to do so, I created a data frame of the statistics using the best modern active baseball hitter, Mike Trout. I then retrained a new logistic regression model using all of the statistics from my original data set that were available for Trout. 
+
+```{r echo=FALSE}
+logmodelallstats <- glm(Inducted ~ WAR + DWAR + G + AB + R + H + HR + RBI + SB + BB + BA + OBP + SLG + OPS,
+                           data = MYDATA2,
+                           family = binomial)
+```
+
+```{r}
+mike_trout <- data.frame(
+  WAR = 85.2,
+  DWAR = 2.8,
+  G = 1489,
+  AB = 5402,
+  R = 1106,
+  H = 1624,
+  HR = 368,
+  RBI = 940,
+  SB = 206,
+  BB = 964,
+  BA = 0.301,
+  OBP = 0.412,
+  SLG = 0.582,
+  OPS = 0.994
+)
+prediction_trout <- predict(logmodelallstats, newdata = mike_trout, type = "response")
+print(prediction_trout)
+```
+
+My new model that incorporates all of the original variables, predicts that Trout's chances of being inducted are nearly 100% at 99.97%. This makes sense as Trout is widely regarded as one of the best players of all time and he is only 32 years old. 
+
+We can also run this test on a player that is on the Hall of Fame Ballot for 2024. I chose to predict Chase Utley's chances of induction for my final model. 
+```{r}
+Chase_Utley <- data.frame(
+  WAR = 64.5,
+  DWAR = 17.3,
+  G = 1937,
+  AB = 6857,
+  R = 1103,
+  H = 1885,
+  HR = 259,
+  RBI = 1025,
+  SB = 154,
+  BB = 724,
+  BA = 0.275,
+  OBP = 0.358,
+  SLG = 0.465,
+  OPS = 0.823
+)
+prediction_utley <- predict(logmodelallstats, newdata = Chase_Utley, type = "response")
+print(prediction_utley)
+```
+
+While Utley is widely considered one of the best second basemen of the 2000s, the model predicts Utley has a 58% of induction based on his metrics. To be fair, this model does not account for positional differences, but rather compares Utley to every player inducted vs. not-inducted and regardless of their position.
+
+# 8. Discussion & Conclusion
+
+In conclusion, this analysis examined the relationship between statistics and Hall of Fame induction. I found multiple compelling insights into the differences between former Hall of Fame inductees and players who were considered great, but ultimately were not selected for the honor. I found strong statistical evidence that Wins Above Replacement (WAR) has a strong association with Hall of Fame induction, however this doesn't mean these two are directly correlated. I also discovered strong associations between WAR and a variety of offensive statistics such as homeruns, runs batted in, and hits. Further, my data allowed me to train a model that takes statistics of a player not in the data set and predict their likelihood of Hall of Fame induction based on the previous inductees and non-inductees. The model predicted Trout's near-certain induction, meanwhile, the estimate prediction for Chase Utley reflects how positional differences and evolving standards play a crucial role in induction. 
+
+# 9. Limitations & Questions
+
+The most prominent limitation in this analysis was the exclusion of non statistical factors and how they impact voting. More precisely, how do all-star appearances, player popularity and different time periods impact probabilities of induction? Pursuing a further examination between time periods, or including further variables involving player popularity and all-star appearances could produce differing patterns that this generalized analysis may not allow us to observe. 
+
+# 10. Citations and References
+
+Baseball Reference. (2023). National Baseball Hall of Fame Inductees. Retrieved November 27, 2023, from [https://www.baseball-reference.com/awards/hof.shtml]
+
+National Baseball Hall of Fame and Museum. (2023). History of The Museum. Retrieved November 27, 2023, from [https://baseballhall.org/about-the-hall]
